@@ -416,18 +416,17 @@ class FractureModes:
                 # igl.write_obj(filename, self.mesh_to_write_vertices, self.mesh_to_write_triangles)
 
     def write_segmented_modes(self, filename=None, pieces=False):
-
-        for j in range(self.modes.shape[1]):
+        for j in tqdm(range(self.modes.shape[1]), desc="Writing segmented modes"):
             Vs = []
             Fs = []
             self.fine_labels = self.piece_to_fine_vertices_matrix @ self.piece_labels
+            pieces_dir = None
             if pieces:
-                new_dir = os.path.join(filename, "mode_" + str(j))
-                if not os.path.exists(new_dir):
-                    os.mkdir(new_dir)
+                pieces_dir = os.path.join(filename, f"mode_{j}")
+                os.makedirs(pieces_dir, exist_ok=True)
             running_n = 0  # for combining meshes
             self.fine_labels = self.fine_labels.astype(int)
-            for i in range(np.max(self.fine_labels[:, j]) + 1):  #
+            for i in range(np.max(self.fine_labels[:, j]) + 1):
 
                 # Double check this loop limit
                 if self.fine_vertices is not None:
@@ -441,12 +440,15 @@ class FractureModes:
                 ui, I, J, _ = igl.remove_duplicate_vertices(vi, fi, 1e-10)
                 gi = J[fi]
                 if pieces:
-                    write_file_name = os.path.join(new_dir, f"piece_{i}.ply")
+                    if self.v_interior is not None and self.f_interior is not None:
+                        ui, gi = mesh_boolean(ui, gi.astype(np.int32), self.v_interior,
+                                              self.f_interior.astype(np.int32), boolean_type='difference')
+                    write_file_name = os.path.join(pieces_dir, f"piece_{i}.ply")
                     igl.write_triangle_mesh(write_file_name, ui, gi, force_ascii=False)
                     # igl.write_obj(write_file_name, ui, gi)
                 Vs.append(ui)
                 Fs.append(gi + running_n)
-                running_n = running_n + ui.shape[0]
+                running_n += ui.shape[0]
             self.mesh_to_write_vertices = np.vstack(Vs)
             self.mesh_to_write_triangles = np.vstack(Fs)
             if filename is not None:
