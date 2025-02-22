@@ -80,9 +80,8 @@ def decompress_mesh(mesh_dir_full_path, save_dir):
             ui, I, J, _ = igl.remove_duplicate_vertices(vi, fi, 1e-10)
             gi = J[fi]
             # Now we write the mesh ui, gi
-            write_file_name = os.path.join(frac_save_path,
-                                           "piece_" + str(i) + ".obj")
-            igl.write_triangle_mesh(write_file_name, ui, gi)
+            write_file_name = os.path.join(frac_save_path, f"piece_{i}.ply")
+            igl.write_triangle_mesh(write_file_name, ui, gi, force_ascii=False)
             num_fracs = num_fracs + 1
 
     return num_fracs
@@ -101,8 +100,7 @@ def decompress_category(category_dir, save_dir):
         num_fracs += decompress_mesh(mesh_dir_full_path, mesh_save_dir)
 
     total_time = time.time() - t0
-    print("Decompressed a total of", str(num_fracs), "fracture pieces in",
-          round(total_time, 3), "seconds.")
+    print(f"Decompressed a total of {num_fracs} fracture pieces in {total_time} seconds.")
 
 
 def process_everyday(data_root, category):

@@ -53,14 +53,14 @@ from gpytoolbox.copyleft import lazy_cage
 v_fine, f_fine = igl.read_triangle_mesh("data/bunny_oded.obj")
 v_fine = gpytoolbox.normalize_points(v_fine)
 # This is the "cage mesh", i.e. the coarser mesh that we will tetrahedralize and use for the physical simulation
-v, f = lazy_cage(v_fine,f_fine,num_faces=100)
+v, f = lazy_cage(v_fine, f_fine, num_faces=100)
 # Tetrahedralize
-tgen = tetgen.TetGen(v,f)
-nodes, elements =  tgen.tetrahedralize()
+tgen = tetgen.TetGen(v, f)
+nodes, elements = tgen.tetrahedralize()
 # Initialize fracture mode class
-modes = fracture.fracture_modes(nodes,elements) 
+modes = fracture.FractureModes(nodes, elements)
 # Set parameters for call to fracture modes
-params = fracture.fracture_modes_parameters(num_modes=10,verbose=True,d=3)
+params = fracture.FractureModesParameters(num_modes=10, verbose=True, d=3)
 # Compute fracture modes
 modes.compute_modes(parameters=params)
 ```
