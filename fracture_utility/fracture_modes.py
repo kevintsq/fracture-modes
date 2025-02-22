@@ -454,7 +454,7 @@ class FractureModes:
             if filename is not None:
                 if not pieces:
                     igl.write_triangle_mesh(f"{filename}_mode_{j}.ply", self.mesh_to_write_vertices,
-                                           self.mesh_to_write_triangles, force_ascii=False)
+                                            self.mesh_to_write_triangles, force_ascii=False)
                     # igl.write_obj(filename + "_mode_" + str(j) + ".ply", self.mesh_to_write_vertices,
                     #               self.mesh_to_write_triangles)
 

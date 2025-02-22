@@ -73,10 +73,10 @@ def normalize_points(v, v_interior=None, center=None):
             v_interior += trans
         return v, v_interior
 
-    return v
+    return v, None
 
-def generate_fractures(input_dir, interior_filename=None, num_modes=20, num_impacts=80, output_dir=None, verbose=True, compressed=True,
-                       cage_size=4000, volume_constraint=(1 / 50)):
+def generate_fractures(input_dir, interior_filename=None, num_modes=20, num_impacts=80, output_dir=None, verbose=True,
+                       compressed=True, cage_size=4000, volume_constraint=(1 / 50)):
     """Randomly generate different fractures of a given object and write them to an output directory.
     
     Parameters
@@ -98,7 +98,7 @@ def generate_fractures(input_dir, interior_filename=None, num_modes=20, num_impa
     """
 
     # directory = os.fsencode(input_dir)
-    np.random.seed(0)
+    # np.random.seed(0)
     # for file in os.listdir(directory):
     filename = input_dir
     t0 = time.time()
@@ -148,65 +148,64 @@ def generate_fractures(input_dir, interior_filename=None, num_modes=20, num_impa
         modes.write_segmented_modes_compressed(output_dir)
     else:
         modes.write_segmented_modes(output_dir, pieces=True)
-    t31 = time.time()
-    mode_time = t31 - t30
-    if verbose:
-        print(f"Modes computed in {mode_time} seconds.")
-    # # Generate random contact points on the surface
-    B, FI = igl.random_points_on_mesh(1000 * num_impacts, v, f)
-    B = np.vstack((B[:, 0], B[:, 0], B[:, 0], B[:, 1], B[:, 1], B[:, 1], B[:, 2], B[:, 2], B[:, 2])).T
-    P = B[:, 0:3] * v[f[FI, 0], :] + B[:, 3:6] * v[f[FI, 1], :] + B[:, 6:9] * v[f[FI, 2], :]
 
-    # sigmas = np.random.rand(1000 * num_impacts) * 1000
+    if num_impacts:
+        t31 = time.time()
+        mode_time = t31 - t30
+        if verbose:
+            print(f"Modes computed in {mode_time} seconds.")
+        # # Generate random contact points on the surface
+        B, FI = igl.random_points_on_mesh(1000 * num_impacts, v, f)
+        B = np.vstack((B[:, 0], B[:, 0], B[:, 0], B[:, 1], B[:, 1], B[:, 1], B[:, 2], B[:, 2], B[:, 2])).T
+        P = B[:, 0:3] * v[f[FI, 0], :] + B[:, 3:6] * v[f[FI, 1], :] + B[:, 6:9] * v[f[FI, 2], :]
 
-    vols = igl.volume(modes.vertices, modes.elements)
-    # total_vol = np.sum(vols)
+        # sigmas = np.random.rand(1000 * num_impacts) * 1000
 
-    t40 = time.time()
-    # Loop to generate many possible fractures
-    all_labels = np.zeros((modes.precomputed_num_pieces, num_impacts), dtype=int)
-    running_num = 0
-    with tqdm(range(P.shape[0]), desc="Generating Fractures") as pbar:
-        for i in pbar:
-            # t400 = time.time()
-                modes.impact_projection(contact_point=P[i, :], direction=np.array([1.0]), threshold=10)
-            # min_volume = volume_constraint * total_vol / modes.n_pieces_after_impact
-            # current_min_volume = total_vol
-            # for i in range(modes.n_pieces_after_impact):
-            #     current_min_volume = min(current_min_volume, np.sum(vols[modes.tet_labels_after_impact == i]))
-            # valid_volume = (current_min_volume >= min_volume)
-            # t401 = time.time()
-            # # if verbose:
-            # #     print("Impact simulation: ",round(t401-t400,3),"seconds.")
-            # new = not (modes.piece_labels_after_impact.tolist() in all_labels.T.tolist())
-            # # print(modes.piece_labels_after_impact.tolist() in all_labels.T.tolist())
-            # if 1 < modes.n_pieces_after_impact < 100 and new and valid_volume:
-            #     all_labels[:, running_num] = modes.piece_labels_after_impact
-                write_output_name = os.path.join(output_dir, f"fractured_{running_num}")
-                os.makedirs(write_output_name, exist_ok=True)
-                try:
-                    if compressed:
-                        modes.write_segmented_output_compressed(filename=write_output_name)
-                    else:
-                        modes.write_segmented_output(filename=write_output_name, pieces=True)
-                except ValueError:
-                    continue
-                # t402 = time.time()
-                # if verbose:
-                #     print("Writing: ",round(t402-t401,3),"seconds.")
-                running_num += 1
-                pbar.set_postfix_str(f"{running_num}/{num_impacts}({running_num / num_impacts:.2%}) impacts generated")
-                if running_num >= num_impacts:
-                    break
-    # print(all_labels)
-    t41 = time.time()
-    impact_time = t41 - t40
-    if verbose:
-        print(f"Impacts computed in {impact_time} seconds.")
-    t1 = time.time()
-    total_time = t1 - t0
-    if verbose:
-        print(f"Generated {running_num} fractures for object {filename_without_extension} and wrote them into {output_dir} in {total_time} seconds.")
-    # except:
-    #     if verbose:
-    #         print("Error encountered.")
+        # vols = igl.volume(modes.vertices, modes.elements)
+        # total_vol = np.sum(vols)
+
+        t40 = time.time()
+        # Loop to generate many possible fractures
+        # all_labels = np.zeros((modes.precomputed_num_pieces, num_impacts), dtype=int)
+        running_num = 0
+        with tqdm(range(P.shape[0]), desc="Generating Fractures") as pbar:
+            for i in pbar:
+                # t400 = time.time()
+                    modes.impact_projection(contact_point=P[i, :], direction=np.array([1.0]), threshold=10)
+                # min_volume = volume_constraint * total_vol / modes.n_pieces_after_impact
+                # current_min_volume = total_vol
+                # for i in range(modes.n_pieces_after_impact):
+                #     current_min_volume = min(current_min_volume, np.sum(vols[modes.tet_labels_after_impact == i]))
+                # valid_volume = (current_min_volume >= min_volume)
+                # t401 = time.time()
+                # # if verbose:
+                # #     print("Impact simulation: ",round(t401-t400,3),"seconds.")
+                # new = not (modes.piece_labels_after_impact.tolist() in all_labels.T.tolist())
+                # # print(modes.piece_labels_after_impact.tolist() in all_labels.T.tolist())
+                # if 1 < modes.n_pieces_after_impact < 100 and new and valid_volume:
+                #     all_labels[:, running_num] = modes.piece_labels_after_impact
+                    write_output_name = os.path.join(output_dir, f"fractured_{running_num}")
+                    os.makedirs(write_output_name, exist_ok=True)
+                    try:
+                        if compressed:
+                            modes.write_segmented_output_compressed(filename=write_output_name)
+                        else:
+                            modes.write_segmented_output(filename=write_output_name, pieces=True)
+                    except ValueError:
+                        continue
+                    # t402 = time.time()
+                    # if verbose:
+                    #     print("Writing: ",round(t402-t401,3),"seconds.")
+                    running_num += 1
+                    pbar.set_postfix_str(f"{running_num}/{num_impacts}({running_num / num_impacts:.2%}) impacts generated")
+                    if running_num >= num_impacts:
+                        break
+        # print(all_labels)
+        t41 = time.time()
+        impact_time = t41 - t40
+        if verbose:
+            print(f"Impacts computed in {impact_time} seconds.")
+        t1 = time.time()
+        total_time = t1 - t0
+        if verbose:
+            print(f"Generated {running_num} fractures for object {filename_without_extension} and wrote them into {output_dir} in {total_time} seconds.")
