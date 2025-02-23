@@ -5,6 +5,7 @@ import multiprocessing
 import subprocess
 from argparse import ArgumentParser
 
+from psutil import cpu_count
 from tqdm import tqdm
 
 
@@ -43,7 +44,7 @@ if __name__ == "__main__":
 
     # 获取所有 .obj 文件
     models = glob.glob(f"{args.input}/*.obj")
-    with multiprocessing.Pool(6) as pool, tqdm(total=len(models)) as pbar:
+    with multiprocessing.Pool(cpu_count(logical=False)) as pool, tqdm(total=len(models)) as pbar:
         for result in pool.imap_unordered(process_model, models):
             pbar.update()
             pbar.set_postfix_str(f"Processed {result}")
