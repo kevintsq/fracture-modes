@@ -13,6 +13,6 @@ args = parser.parse_args()
 output_dir = os.path.splitext(os.path.basename(args.input))[0]
 
 # Call dataset generation
-fracture.generate_fractures(args.input, interior_filename=args.interior, num_modes=8, num_impacts=20,
+fracture.generate_fractures(args.input, interior_filename=args.interior, num_modes=7, num_impacts=25,
                             output_dir=output_dir, verbose=True, compressed=False, cage_size=2000,
                             volume_constraint=0.00)

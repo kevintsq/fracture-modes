@@ -116,7 +116,7 @@ def generate_fractures(input_dir, interior_filename=None, num_modes=20, num_impa
         print(f"Read shape in {reading_time} seconds.")
     # Build cage mesh (this may actually be the bottleneck...)
     t10 = time.time()
-    v, f = lazy_cage(v_fine, f_fine, num_faces=cage_size, grid_size=50)
+    v, f = lazy_cage(v_fine, f_fine, num_faces=cage_size, grid_size=256)
     t11 = time.time()
     cage_time = t11 - t10
     if verbose:
