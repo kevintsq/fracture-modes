@@ -4,6 +4,7 @@ import os
 # Libigl
 import igl
 import numpy as np
+import trimesh
 from gpytoolbox.copyleft import mesh_boolean
 from scipy.sparse import coo_matrix, csr_matrix, eye, kron, save_npz
 from scipy.sparse.csgraph import connected_components
@@ -403,6 +404,7 @@ class FractureModes:
                     ui, gi = mesh_boolean(ui, gi.astype(np.int32), self.v_interior, self.f_interior.astype(np.int32),
                                           boolean_type='difference')
                 write_file_name = os.path.join(filename, f"piece_{i}.ply")
+                # save_without_internal_faces(ui, gi, write_file_name)
                 igl.write_triangle_mesh(write_file_name, ui, gi, force_ascii=False)
                 # igl.write_obj(write_file_name, ui, gi)
             Vs.append(ui)
@@ -444,6 +446,7 @@ class FractureModes:
                         ui, gi = mesh_boolean(ui, gi.astype(np.int32), self.v_interior,
                                               self.f_interior.astype(np.int32), boolean_type='difference')
                     write_file_name = os.path.join(pieces_dir, f"piece_{i}.ply")
+                    # save_without_internal_faces(ui, gi, write_file_name)
                     igl.write_triangle_mesh(write_file_name, ui, gi, force_ascii=False)
                     # igl.write_obj(write_file_name, ui, gi)
                 Vs.append(ui)
@@ -482,3 +485,35 @@ def ternary(n, m):
         n, r = divmod(n, 3)
         nums.append(str(r))
     return ''.join(reversed(nums))
+
+
+def save_without_internal_faces(v, f, filename):
+    # 获取每个顶点是否在 mesh 内部，注意要求 mesh 是 watertight，否则结果可能不准确
+    mesh = trimesh.Trimesh(vertices=v.astype(np.float32), faces=f)
+    inside_mask = mesh.contains(mesh.vertices)
+
+    # 计算外部顶点的布尔掩码
+    valid_mask = ~inside_mask
+
+    # 筛选出所有面中，顶点全部为外部的面
+    face_valid_mask = np.all(valid_mask[mesh.faces], axis=1)
+    valid_faces = mesh.faces[face_valid_mask]
+
+    # 找出被 valid_faces 使用的顶点索引
+    valid_vertex_indices = np.unique(valid_faces)
+
+    # 重新映射顶点索引
+    new_index = np.full(len(mesh.vertices), -1, dtype=int)
+    new_index[valid_vertex_indices] = np.arange(len(valid_vertex_indices))
+    new_faces = new_index[valid_faces]
+    new_vertices = mesh.vertices[valid_vertex_indices]
+
+    # 创建新的 mesh，只保留外部顶点和对应的面
+    new_mesh = trimesh.Trimesh(vertices=new_vertices, faces=new_faces)
+
+    # 可选：保存新的 mesh
+    new_mesh.export(filename, encoding='binary')
+
+    print("原始顶点数：", len(mesh.vertices))
+    print("剩余外部顶点数：", len(new_vertices))
+    print("剩余面数：", len(new_faces))
