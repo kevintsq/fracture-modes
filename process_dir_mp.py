@@ -5,6 +5,7 @@ import multiprocessing
 import subprocess
 from argparse import ArgumentParser
 
+import psutil
 from tqdm import tqdm
 
 
@@ -37,6 +38,7 @@ fracture.generate_fractures(
 
     return output_dir
 
+
 def worker_process(cpus, task_queue):
     env = os.environ.copy()
     env["OMP_NUM_THREADS"] = "2"
@@ -63,13 +65,13 @@ def worker_process(cpus, task_queue):
         command = [
             sys.executable, "-c",  # 让 Python 运行一个字符串脚本
             f"""
-        import psutil
-        psutil.Process().cpu_affinity({cpus:!r})
-        from scripts.context import fracture_utility as fracture
-        fracture.generate_fractures(
-            r'{model}', r'{interior}', num_modes=112, num_impacts=112,
-            output_dir=r'{output_dir}', verbose=True, compressed=False, cage_size=5000,
-            volume_constraint=0.00)
+import psutil
+psutil.Process().cpu_affinity({repr(cpus)})
+from scripts.context import fracture_utility as fracture
+fracture.generate_fractures(
+    r'{model}', r'{interior}', num_modes=112, num_impacts=112,
+    output_dir=r'{output_dir}', verbose=True, compressed=False, cage_size=5000,
+    volume_constraint=0.00)
         """
         ]
 
