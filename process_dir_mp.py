@@ -41,11 +41,12 @@ fracture.generate_fractures(
 
 def worker_process(cpus, task_queue):
     env = os.environ.copy()
-    env["OMP_NUM_THREADS"] = "2"
-    env["MKL_NUM_THREADS"] = "2"
-    env["OPENBLAS_NUM_THREADS"] = "2"
-    env["VECLIB_MAXIMUM_THREADS"] = "2"
-    env["NUMEXPR_NUM_THREADS"] = "2"
+    n_cpus = f"{len(cpus)}"
+    env["OMP_NUM_THREADS"] = n_cpus
+    env["MKL_NUM_THREADS"] = n_cpus
+    env["OPENBLAS_NUM_THREADS"] = n_cpus
+    env["VECLIB_MAXIMUM_THREADS"] = n_cpus
+    env["NUMEXPR_NUM_THREADS"] = n_cpus
 
     while True:
         model = task_queue.get()
