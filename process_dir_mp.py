@@ -26,8 +26,8 @@ def process_model(model):
         f"""
 from scripts.context import fracture_utility as fracture
 fracture.generate_fractures(
-    r'{model}', r'{interior}', num_modes=112, num_impacts=112,
-    output_dir=r'{output_dir}', verbose=True, compressed=False, cage_size=5000,
+    {model!r}, {interior!r}, num_modes=112, num_impacts=112,
+    output_dir={output_dir!r}, verbose=True, compressed=False, cage_size=5000,
     volume_constraint=0.00)
 """
     ]
@@ -67,11 +67,11 @@ def worker_process(cpus, task_queue):
             sys.executable, "-c",  # 让 Python 运行一个字符串脚本
             f"""
 import psutil
-psutil.Process().cpu_affinity({repr(cpus)})
+psutil.Process().cpu_affinity({cpus!r})
 from scripts.context import fracture_utility as fracture
 fracture.generate_fractures(
-    r'{model}', r'{interior}', num_modes=112, num_impacts=112,
-    output_dir=r'{output_dir}', verbose=True, compressed=False, cage_size=5000,
+    {model!r}, {interior!r}, num_modes=4, num_impacts=6,
+    output_dir={output_dir!r}, verbose=True, compressed=False, cage_size=5000,
     volume_constraint=0.00)
         """
         ]

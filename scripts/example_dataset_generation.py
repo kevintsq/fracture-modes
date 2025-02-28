@@ -14,5 +14,5 @@ output_dir = os.path.splitext(os.path.basename(args.input))[0]
 
 # Call dataset generation
 fracture.generate_fractures(args.input, interior_filename=args.interior, num_modes=4, num_impacts=6,
-                            output_dir=output_dir, verbose=True, compressed=False, cage_size=2000,
+                            output_dir=output_dir, verbose=True, compressed=False, cage_size=5000,
                             volume_constraint=0.00)
