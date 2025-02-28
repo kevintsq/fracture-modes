@@ -6,7 +6,6 @@ import subprocess
 from argparse import ArgumentParser
 
 import psutil
-from tqdm import tqdm
 
 
 def process_model(model):
@@ -53,6 +52,7 @@ def worker_process(cpus, task_queue):
         if model is None:
             break
 
+        print(f"Processing {model} on CPU {cpus}")
         output_dir = os.path.splitext(model)[0].replace("object", "synthetic_fracture")  # 确定输出文件夹
         log_file = os.path.join(output_dir, "process.log")  # 每个模型的日志文件
         interior = model.replace("object", "interior")
@@ -70,7 +70,7 @@ import psutil
 psutil.Process().cpu_affinity({cpus!r})
 from scripts.context import fracture_utility as fracture
 fracture.generate_fractures(
-    {model!r}, {interior!r}, num_modes=4, num_impacts=6,
+    {model!r}, {interior!r}, num_modes=72, num_impacts=72,
     output_dir={output_dir!r}, verbose=True, compressed=False, cage_size=5000,
     volume_constraint=0.00)
         """
@@ -80,7 +80,7 @@ fracture.generate_fractures(
         with open(log_file, "w") as log:
             subprocess.run(command, env=env, stdout=log, stderr=log, text=True)
 
-        return output_dir
+        print(f"Processed {model} on CPU {cpus}")
 
 
 if __name__ == "__main__":
@@ -96,18 +96,19 @@ if __name__ == "__main__":
     for task in models:
         task_queue.put(task)
 
-    cpus = list(range(psutil.cpu_count(logical=False)))
+    n_cpus = psutil.cpu_count(logical=False)
+    cpus = list(range(n_cpus))
     for _ in cpus:
         task_queue.put(None)
 
     processes = []
     for cpu in cpus:
         p = multiprocessing.Process(target=worker_process,
-                                    args=((cpu, cpu + len(cpus)), task_queue))
+                                    args=((cpu, cpu + n_cpus), task_queue))
         p.start()
         processes.append(p)
 
-    for p in tqdm(processes):
+    for p in processes:
         p.join()
 
     # with multiprocessing.Pool(6) as pool, tqdm(total=len(models)) as pbar:
