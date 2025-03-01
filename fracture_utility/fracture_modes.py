@@ -419,7 +419,7 @@ class FractureModes:
                 # igl.write_obj(filename, self.mesh_to_write_vertices, self.mesh_to_write_triangles)
 
     def write_segmented_modes(self, filename=None, pieces=False):
-        begin = search_for_max_iteration(filename)
+        begin = len(glob.glob(f"{filename}/mode_*"))
         for j in tqdm(range(self.modes.shape[1]), desc="Writing segmented modes"):
             Vs = []
             Fs = []
@@ -462,10 +462,6 @@ class FractureModes:
                                             self.mesh_to_write_triangles, force_ascii=False)
                     # igl.write_obj(filename + "_mode_" + str(j) + ".ply", self.mesh_to_write_vertices,
                     #               self.mesh_to_write_triangles)
-
-
-def search_for_max_iteration(folder):
-    return len(glob.glob(f"{folder}/mode_*"))
 
 
 def boundary_faces_fixed(ti):

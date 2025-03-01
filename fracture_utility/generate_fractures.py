@@ -1,4 +1,5 @@
 # Include existing libraries
+import glob
 import os
 import time
 
@@ -167,7 +168,7 @@ def generate_fractures(input_dir, interior_filename=None, num_modes=20, num_impa
         t40 = time.time()
         # Loop to generate many possible fractures
         # all_labels = np.zeros((modes.precomputed_num_pieces, num_impacts), dtype=int)
-        running_num = 0
+        running_num = len(glob.glob(f"{filename}/fractured_*"))
         with tqdm(range(P.shape[0]), desc="Generating Fractures") as pbar:
             for i in pbar:
                 # t400 = time.time()

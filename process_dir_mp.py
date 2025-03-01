@@ -70,7 +70,7 @@ import psutil
 psutil.Process().cpu_affinity({cpus!r})
 from scripts.context import fracture_utility as fracture
 fracture.generate_fractures(
-    {model!r}, {interior!r}, num_modes=9, num_impacts=0,
+    {model!r}, {interior!r}, num_modes=5, num_impacts=6,
     output_dir={output_dir!r}, verbose=True, compressed=False, cage_size=5000,
     volume_constraint=0.00)
         """
