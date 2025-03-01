@@ -70,7 +70,7 @@ import psutil
 psutil.Process().cpu_affinity({cpus!r})
 from scripts.context import fracture_utility as fracture
 fracture.generate_fractures(
-    {model!r}, {interior!r}, num_modes=72, num_impacts=72,
+    {model!r}, {interior!r}, num_modes=9, num_impacts=0,
     output_dir={output_dir!r}, verbose=True, compressed=False, cage_size=5000,
     volume_constraint=0.00)
         """
@@ -87,14 +87,16 @@ if __name__ == "__main__":
     # 读取输入参数
     parser = ArgumentParser()
     parser.add_argument('root_dir', type=str)
+    parser.add_argument('--repeat', type=int, default=1)
     args = parser.parse_args()
 
     # 获取所有 .obj 文件
     models = glob.glob(f"{args.root_dir}/object/*.obj")
     task_queue = multiprocessing.Queue()
 
-    for task in models:
-        task_queue.put(task)
+    for _ in range(args.repeat):
+        for task in models:
+            task_queue.put(task)
 
     n_cpus = psutil.cpu_count(logical=False)
     cpus = list(range(n_cpus))
