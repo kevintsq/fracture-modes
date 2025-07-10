@@ -70,7 +70,7 @@ import psutil
 psutil.Process().cpu_affinity({cpus!r})
 from scripts.context import fracture_utility as fracture
 fracture.generate_fractures(
-    {model!r}, {interior!r}, num_modes=5, num_impacts=6,
+    {model!r}, {interior!r}, num_modes=5, num_impacts=0,
     output_dir={output_dir!r}, verbose=True, compressed=False, cage_size=5000,
     volume_constraint=0.00)
         """
@@ -86,14 +86,28 @@ fracture.generate_fractures(
 if __name__ == "__main__":
     # 读取输入参数
     parser = ArgumentParser()
-    parser.add_argument('root_dir', type=str)
+    parser.add_argument('--root_dir', type=str, default="/mnt/NAS/data/zj2631/MorphoSource")
+    parser.add_argument('--rank', type=int, required=True)
     parser.add_argument('--repeat', type=int, default=1)
     args = parser.parse_args()
+    rank = args.rank
 
-    # 获取所有 .obj 文件
-    models = glob.glob(f"{args.root_dir}/object/*.obj")
+    models = list(sorted(glob.glob(f"{args.root_dir}/object/*.ply")))
+    cpus = [16, 16, 12, 10, 32]
+
+    # === 按 rank 分配任务 ===
+    total = sum(cpus)
+    sizes = [round(len(models) * c / total) for c in cpus]
+
+    # 调整最后一块，确保总和正确
+    sizes[-1] = len(models) - sum(sizes[:-1])
+
+    # 得到每段的起止 index
+    start_idx = sum(sizes[:rank])
+    end_idx = start_idx + sizes[rank]
+    models = models[start_idx:end_idx]
+
     task_queue = multiprocessing.Queue()
-
     for _ in range(args.repeat):
         for task in models:
             task_queue.put(task)

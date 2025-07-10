@@ -427,7 +427,6 @@ class FractureModes:
             pieces_dir = None
             if pieces:
                 pieces_dir = os.path.join(filename, f"mode_{j + begin}")
-                os.makedirs(pieces_dir, exist_ok=True)
             running_n = 0  # for combining meshes
             self.fine_labels = self.fine_labels.astype(int)
             for i in range(np.max(self.fine_labels[:, j]) + 1):
@@ -449,6 +448,7 @@ class FractureModes:
                                               self.f_interior.astype(np.int32), boolean_type='difference')
                     write_file_name = os.path.join(pieces_dir, f"piece_{i}.ply")
                     # save_without_internal_faces(ui, gi, write_file_name)
+                    os.makedirs(pieces_dir, exist_ok=True)
                     igl.write_triangle_mesh(write_file_name, ui, gi, force_ascii=False)
                     # igl.write_obj(write_file_name, ui, gi)
                 Vs.append(ui)
