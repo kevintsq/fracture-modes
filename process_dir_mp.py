@@ -3,6 +3,7 @@ import os
 import sys
 import multiprocessing
 import subprocess
+import time
 from argparse import ArgumentParser
 
 import psutil
@@ -52,7 +53,8 @@ def worker_process(cpus, task_queue):
         if model is None:
             break
 
-        print(f"Processing {model} on CPU {cpus}")
+        start_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        print(f"[{start_time}] Processing {model} on CPU {cpus}")
         output_dir = os.path.splitext(model)[0].replace("object", "synthetic_fracture")  # 确定输出文件夹
         log_file = os.path.join(output_dir, "process.log")  # 每个模型的日志文件
         interior = model.replace("object", "interior")
@@ -78,9 +80,10 @@ fracture.generate_fractures(
 
         # 运行子进程，重定向所有输出到 log_file
         with open(log_file, "w") as log:
-            subprocess.run(command, env=env, stdout=log, stderr=log, text=True)
+            r = subprocess.run(command, env=env, stdout=log, stderr=log, text=True)
 
-        print(f"Processed {model} on CPU {cpus}")
+        end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        print(f"[{end_time}] Processed {model} on CPU {cpus} with return code {r.returncode}")
 
 
 if __name__ == "__main__":
