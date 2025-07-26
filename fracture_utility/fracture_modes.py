@@ -1,7 +1,8 @@
 # Include existing libraries
-import glob
 import os
+import uuid
 
+import gpytoolbox
 # Libigl
 import igl
 import numpy as np
@@ -51,21 +52,21 @@ class FractureModes:
                 label = self.labels[:, 0]  # should be all zeros
                 for j in range(3):
                     mode_3d = np.zeros((3 * self.elements.shape[0], 1))
-                    indeces = j * self.elements.shape[0] + np.linspace(0, self.elements.shape[0] - 1,
+                    indexes = j * self.elements.shape[0] + np.linspace(0, self.elements.shape[0] - 1,
                                                                        self.elements.shape[0], dtype=int)
-                    mode_3d[indeces] = np.mean(self.modes[:, 0])
+                    mode_3d[indexes] = np.mean(self.modes[:, 0])
                     modes_3d.append(mode_3d)
                     labels_3d.append(np.reshape(label, (-1, 1)))
             else:
                 # In this case, we can remove one degree of freedom because we know displacements will be in the span of the modes
                 labels = self.labels[:, k]
                 n_components = np.max(labels.astype(int)) + 1
-                # Compute per-piece displacements and tet-to-piece indeces for each mode
+                # Compute per-piece displacements and tet-to-piece indexes for each mode
                 displacements = np.zeros(n_components)
-                indeces = []
+                indexes = []
                 for j in range(n_components):
                     displacements[j] = np.mean(self.modes[labels == j, k])
-                    indeces.append(np.nonzero(labels == j))
+                    indexes.append(np.nonzero(labels == j))
                 # This is how many 3D modes we'll get... (a lot!)
                 multiplicity = 3 ** (n_components - 1)
                 for i in range(multiplicity):
@@ -74,7 +75,7 @@ class FractureModes:
                     ter = ternary(i, n_components - 1)
                     for j in range(n_components - 1):
                         remainder = int(ter[j])
-                        mode_3d[remainder * self.elements.shape[0] + indeces[j][0]] = displacements[j]
+                        mode_3d[remainder * self.elements.shape[0] + indexes[j][0]] = displacements[j]
                     modes_3d.append(mode_3d)
                     labels_3d.append(np.reshape(labels, (-1, 1)))
         # Stack everything into 3D modes
@@ -107,7 +108,7 @@ class FractureModes:
         tet_tet_adjacency_matrix = csr_matrix(
             (np.ones(self.tet_neighbors.shape[0]), (self.tet_neighbors[:, 0], self.tet_neighbors[:, 1])),
             shape=(self.exploded_elements.shape[0], self.exploded_elements.shape[0]), dtype=int)
-        # For efficienty, we will later store and do math on *per-piece* impacts, instead of per-tet. For this to work, we need to identify all the possible pieces that break off and mappings between tets and pieces.
+        # For efficiency, we will later store and do math on *per-piece* impacts, instead of per-tet. For this to work, we need to identify all the possible pieces that break off and mappings between tets and pieces.
 
         tet_tet_distances_rep = np.abs(
             self.modes[ind2dim(self.tet_neighbors[:, 0]), :] - self.modes[ind2dim(self.tet_neighbors[:, 1]), :])  # This is a dim x num_neighbor_pairs by num_modes matrix
@@ -115,9 +116,9 @@ class FractureModes:
         # Need to turn this into L2 distances per tet
         tet_tet_distances = np.zeros((self.tet_neighbors.shape[0], self.modes.shape[1]))
         for d in range(dim):
-            indeces = d * self.tet_neighbors.shape[0] + np.linspace(0, self.tet_neighbors.shape[0] - 1,
+            indexes = d * self.tet_neighbors.shape[0] + np.linspace(0, self.tet_neighbors.shape[0] - 1,
                                                                     self.tet_neighbors.shape[0], dtype=int)
-            tet_tet_distances = tet_tet_distances + (tet_tet_distances_rep[indeces, :] ** 2.0)
+            tet_tet_distances = tet_tet_distances + (tet_tet_distances_rep[indexes, :] ** 2.0)
         tet_tet_distances = np.sqrt(tet_tet_distances)
 
         # These are the tets that are together in every mode, which means that no impact projected onto our modes can separate them
@@ -192,19 +193,19 @@ class FractureModes:
         if v_fine is not None:
             # If we want to alleviate the effect of mesh dependency, we can use a post-facto smoothing combined with upper envelope extraction
             # This is unsupported now because we still need to port the upper envelope code to gpytoolbox.
-            # if upper_envelope:
-            # # We convert our per-tet labels into "material densities"
-            #     LT_elements = np.zeros((self.elements.shape[0],self.precomputed_num_pieces))
-            #     for i in range(self.precomputed_num_pieces):
-            #         LT_elements[self.all_modes_labels==i,i] = 1.0
-            #     # Convert per-tet material densities into per-vertex material densities
-            #     LT = blur_onto_vertices(self.elements,LT_elements)
-            #     # Smooth the densities     
-            #     LT = spsolve(eye(self.vertices.shape[0]) - smoothing_lambda*igl.cotmatrix(self.vertices,self.elements),LT)
-            #     # Extract upper envelopes
-            #     u, g, l = gpytoolbox.upper_envelope(self.vertices,self.elements,LT)
+            if upper_envelope:
+            # We convert our per-tet labels into "material densities"
+                LT_elements = np.zeros((self.elements.shape[0],self.precomputed_num_pieces))
+                for i in range(self.precomputed_num_pieces):
+                    LT_elements[self.all_modes_labels==i,i] = 1.0
+                # Convert per-tet material densities into per-vertex material densities
+                LT = blur_onto_vertices(self.elements,LT_elements)
+                # Smooth the densities
+                LT = spsolve(eye(self.vertices.shape[0]) - smoothing_lambda*igl.cotmatrix(self.vertices,self.elements),LT)
+                # Extract upper envelopes
+                u, g, l = gpytoolbox.upper_envelope(self.vertices,self.elements,LT)
 
-            # All this loop is doing is convert each coarse mesh piece into a triangle mesh, intersect it by the fine mesh, save that as a fine mesh piece, and keep track of indeces to get an index-to-fine mapping
+            # All this loop is doing is convert each coarse mesh piece into a triangle mesh, intersect it by the fine mesh, save that as a fine mesh piece, and keep track of indexes to get an index-to-fine mapping
             for i in tqdm(range(self.precomputed_num_pieces), desc="Precomputing fine mesh pieces"):
                 if upper_envelope:
                     if np.any(l[:, i]):  # Sometimes upper envelope entirely removes a material
@@ -360,20 +361,20 @@ class FractureModes:
         # igl.write_obj(write_file_name, self.fine_vertices, self.fine_triangles)
         save_npz(write_data_name, self.piece_to_fine_vertices_matrix)
 
-    def write_segmented_output_compressed(self, filename=None):
-        write_fracture_name = os.path.join(filename, "compressed_fracture.npy")
+    def write_segmented_output_compressed(self, output_file_base=None):
+        write_fracture_name = os.path.join(output_file_base, f"compressed_fractures_{self.piece_labels_after_impact}_{uuid.uuid4().hex}.npy")
+        os.makedirs(output_file_base, exist_ok=True)
         np.save(write_fracture_name, self.piece_labels_after_impact)
 
-    def write_segmented_modes_compressed(self, filename=None):
+    def write_segmented_modes_compressed(self, output_file_base=None):
         for j in range(self.modes.shape[1]):
-            new_dir = os.path.join(filename, f"mode_{j}")
-            if not os.path.exists(new_dir):
-                os.mkdir(new_dir)
-            write_fracture_name = os.path.join(new_dir, "compressed_fracture.npy")
+            new_dir = os.path.join(output_file_base, f"mode_{j}_{uuid.uuid4().hex}")
+            write_modes_name = os.path.join(new_dir, "compressed_modes.npy")
             mode_labels = self.piece_labels[:, j]
-            np.save(write_fracture_name, mode_labels)
+            os.makedirs(new_dir)
+            np.save(write_modes_name, mode_labels)
 
-    def write_segmented_output(self, filename=None, pieces=True):
+    def write_segmented_output(self, output_file_base=None, pieces=True):
         # All this routine is doing is write the fractured output, as a triangle mesh with num_broken_pieces connected components, so you can load it into an animation in another software. If you gave our algorithm a fine mesh, it will write the fractured fine mesh directly.
         # What variables do I need for this:
         # General, per-object data:
@@ -387,6 +388,10 @@ class FractureModes:
         Vs = []
         Fs = []
         running_n = 0  # for combining meshes
+        output_dir = None
+        if pieces:
+            output_dir = os.path.join(output_file_base,
+                                      f"fractured_{self.n_pieces_after_impact}_{uuid.uuid4().hex}")
         for i in range(self.n_pieces_after_impact):
             if self.fine_vertices is not None:
                 tri_labels = self.fine_vertex_labels_after_impact[self.fine_triangles[:, 0]]
@@ -404,7 +409,8 @@ class FractureModes:
                 if self.v_interior is not None and self.f_interior is not None:
                     ui, gi = mesh_boolean(ui, gi.astype(np.int32), self.v_interior, self.f_interior.astype(np.int32),
                                           boolean_type='difference')
-                write_file_name = os.path.join(filename, f"piece_{i}.ply")
+                write_file_name = os.path.join(output_dir, f"piece_{i}.ply")
+                os.makedirs(output_dir, exist_ok=True)
                 # save_without_internal_faces(ui, gi, write_file_name)
                 igl.write_triangle_mesh(write_file_name, ui, gi, force_ascii=False)
                 # igl.write_obj(write_file_name, ui, gi)
@@ -413,31 +419,30 @@ class FractureModes:
             running_n = running_n + ui.shape[0]
         self.mesh_to_write_vertices = np.vstack(Vs)
         self.mesh_to_write_triangles = np.vstack(Fs)
-        if filename is not None:
-            if not pieces:
-                igl.write_triangle_mesh(filename, self.mesh_to_write_vertices, self.mesh_to_write_triangles, force_ascii=False)
-                # igl.write_obj(filename, self.mesh_to_write_vertices, self.mesh_to_write_triangles)
+        if output_file_base and not pieces:
+            igl.write_triangle_mesh(output_file_base, self.mesh_to_write_vertices, self.mesh_to_write_triangles, force_ascii=False)
+            # igl.write_obj(filename, self.mesh_to_write_vertices, self.mesh_to_write_triangles)
 
-    def write_segmented_modes(self, filename=None, pieces=False):
-        begin = len(glob.glob(f"{filename}/mode_*"))
+    def write_segmented_modes(self, output_file_base=None, pieces=False):
         for j in tqdm(range(self.modes.shape[1]), desc="Writing segmented modes"):
             Vs = []
             Fs = []
             self.fine_labels = self.piece_to_fine_vertices_matrix @ self.piece_labels
             pieces_dir = None
             if pieces:
-                pieces_dir = os.path.join(filename, f"mode_{j + begin}")
+                pieces_dir = os.path.join(output_file_base, f"mode_{j}_{uuid.uuid4().hex}")
             running_n = 0  # for combining meshes
             self.fine_labels = self.fine_labels.astype(int)
+            if len(self.fine_labels[:, j]) == 0:
+                print(f"Mode {j} has no labels, skipping writing.")
+                continue
             for i in range(np.max(self.fine_labels[:, j]) + 1):
-
                 # Double check this loop limit
                 if self.fine_vertices is not None:
                     tri_labels = self.fine_labels[self.fine_triangles[:, 0], j]
                     if np.any(tri_labels == i):
                         vi, fi = igl.remove_unreferenced(self.fine_vertices,
                                                          self.fine_triangles[tri_labels == i, :])[:2]
-
                     else:
                         continue
                 ui, I, J, _ = igl.remove_duplicate_vertices(vi, fi, 1e-10)
@@ -456,12 +461,11 @@ class FractureModes:
                 running_n += ui.shape[0]
             self.mesh_to_write_vertices = np.vstack(Vs)
             self.mesh_to_write_triangles = np.vstack(Fs)
-            if filename is not None:
-                if not pieces:
-                    igl.write_triangle_mesh(f"{filename}_mode_{j}.ply", self.mesh_to_write_vertices,
-                                            self.mesh_to_write_triangles, force_ascii=False)
-                    # igl.write_obj(filename + "_mode_" + str(j) + ".ply", self.mesh_to_write_vertices,
-                    #               self.mesh_to_write_triangles)
+            if output_file_base and not pieces:
+                igl.write_triangle_mesh(f"{output_file_base}_mode_{j}.ply", self.mesh_to_write_vertices,
+                                        self.mesh_to_write_triangles, force_ascii=False)
+                # igl.write_obj(filename + "_mode_" + str(j) + ".ply", self.mesh_to_write_vertices,
+                #               self.mesh_to_write_triangles)
 
 
 def boundary_faces_fixed(ti):
@@ -472,7 +476,6 @@ def boundary_faces_fixed(ti):
 def blur_onto_vertices(F, f_vals):
     v_vals = np.zeros((np.max(F.astype(int)) + 1, f_vals.shape[1]))
     valences = np.zeros((np.max(F.astype(int)) + 1, 1))
-    vec_kron = np.ones((F.shape[1], 1))
     for i in range(F.shape[0]):
         valences[F[i, :]] = valences[F[i, :]] + 1
         v_vals[F[i, :], :] = v_vals[F[i, :], :] + f_vals[i, :]

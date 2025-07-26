@@ -91,7 +91,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('--root_dir', type=str, default="/mnt/HDD1/pig")
     parser.add_argument('--rank', type=int, default=None)
-    parser.add_argument('--repeat', type=int, default=1)
+    parser.add_argument('--repeat', type=int, default=8)
     args = parser.parse_args()
     rank = args.rank
 

@@ -1,9 +1,7 @@
 # Include existing libraries
-import glob
 import os
 import time
 
-import gpytoolbox
 # Libigl
 import igl
 import numpy as np
@@ -168,7 +166,7 @@ def generate_fractures(input_dir, interior_filename=None, num_modes=20, num_impa
         t40 = time.time()
         # Loop to generate many possible fractures
         # all_labels = np.zeros((modes.precomputed_num_pieces, num_impacts), dtype=int)
-        running_num = len(glob.glob(f"{filename}/fractured_*"))
+        num_generated = 0
         with tqdm(range(P.shape[0]), desc="Generating Fractures") as pbar:
             for i in pbar:
                 # t400 = time.time()
@@ -185,21 +183,19 @@ def generate_fractures(input_dir, interior_filename=None, num_modes=20, num_impa
                 # # print(modes.piece_labels_after_impact.tolist() in all_labels.T.tolist())
                 # if 1 < modes.n_pieces_after_impact < 100 and new and valid_volume:
                 #     all_labels[:, running_num] = modes.piece_labels_after_impact
-                    write_output_name = os.path.join(output_dir, f"fractured_{running_num}")
-                    os.makedirs(write_output_name, exist_ok=True)
                     try:
                         if compressed:
-                            modes.write_segmented_output_compressed(filename=write_output_name)
+                            modes.write_segmented_output_compressed(output_file_base=output_dir)
                         else:
-                            modes.write_segmented_output(filename=write_output_name, pieces=True)
+                            modes.write_segmented_output(output_file_base=output_dir, pieces=True)
                     except ValueError:
                         continue
                     # t402 = time.time()
                     # if verbose:
                     #     print("Writing: ",round(t402-t401,3),"seconds.")
-                    running_num += 1
-                    pbar.set_postfix_str(f"{running_num}/{num_impacts}({running_num / num_impacts:.2%}) impacts generated")
-                    if running_num >= num_impacts:
+                    num_generated += 1
+                    pbar.set_postfix_str(f"{num_generated}/{num_impacts}({num_generated / num_impacts:.2%}) impacts generated")
+                    if num_generated >= num_impacts:
                         break
         # print(all_labels)
         t41 = time.time()
@@ -209,4 +205,4 @@ def generate_fractures(input_dir, interior_filename=None, num_modes=20, num_impa
         t1 = time.time()
         total_time = t1 - t0
         if verbose:
-            print(f"Generated {running_num} fractures for object {filename_without_extension} and wrote them into {output_dir} in {total_time} seconds.")
+            print(f"Generated {num_generated} fractures for object {filename_without_extension} and wrote them into {output_dir} in {total_time} seconds.")
